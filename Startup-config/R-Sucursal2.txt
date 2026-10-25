@@ -1,0 +1,120 @@
+R-Sucursal2>enable
+R-Sucursal2#show startup-config
+Using 1772 bytes
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname R-Sucursal2
+!
+!
+!
+!
+ip dhcp excluded-address 172.28.80.1 172.28.80.10
+!
+ip dhcp pool LAN-SUC2
+ network 172.28.80.0 255.255.255.0
+ default-router 172.28.80.1
+ dns-server 172.28.100.2
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+!
+license udi pid CISCO2911/K9 sn FTX15248RD4-
+license boot module c2900 technology-package securityk9
+!
+!
+!
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group 2
+!
+crypto isakmp key BCI-VPN-2026 address 203.0.113.9
+!
+!
+!
+crypto ipsec transform-set BCI-TS esp-aes 256 esp-sha-hmac
+!
+crypto map BCI-MAP 10 ipsec-isakmp 
+ set peer 203.0.113.9
+ set transform-set BCI-TS 
+ match address 110
+!
+!
+!
+!
+!
+!
+no ip domain-lookup
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface Loopback0
+ ip address 172.28.252.20 255.255.255.255
+!
+interface GigabitEthernet0/0
+ description Hacia Nube-MPLS (enlace primario)
+ ip address 203.0.113.3 255.255.255.248
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/1
+ description Hacia Nube-Internet (respaldo VPN)
+ ip address 203.0.113.11 255.255.255.248
+ duplex auto
+ speed auto
+ crypto map BCI-MAP
+!
+interface GigabitEthernet0/2
+ description LAN local Sucursal 2
+ ip address 172.28.80.1 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ router-id 172.28.252.20
+ log-adjacency-changes
+ network 172.28.252.20 0.0.0.0 area 0
+ network 203.0.113.0 0.0.0.7 area 0
+ network 172.28.80.0 0.0.0.255 area 0
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 203.0.113.9 200
+!
+ip flow-export version 9
+!
+!
+access-list 110 permit ip 172.28.80.0 0.0.0.255 172.28.0.0 0.0.255.255
+!
+!
+!
+!
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end

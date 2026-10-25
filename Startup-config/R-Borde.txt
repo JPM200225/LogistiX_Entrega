@@ -1,0 +1,165 @@
+R-Borde>enable
+R-Borde#show startup-config
+Using 2847 bytes
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname R-Borde
+!
+!
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+!
+license udi pid CISCO2911/K9 sn FTX1524X5ZS-
+license boot module c2900 technology-package securityk9
+!
+!
+!
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group 2
+!
+crypto isakmp key BCI-VPN-2026 address 203.0.113.10
+crypto isakmp key BCI-VPN-2026 address 203.0.113.11
+!
+!
+!
+crypto ipsec transform-set BCI-TS esp-aes 256 esp-sha-hmac
+!
+crypto map BCI-MAP 10 ipsec-isakmp 
+ set peer 203.0.113.10
+ set transform-set BCI-TS 
+ match address 110
+!
+crypto map BCI-MAP 20 ipsec-isakmp 
+ set peer 203.0.113.11
+ set transform-set BCI-TS 
+ match address 120
+!
+!
+!
+!
+!
+!
+no ip domain-lookup
+!
+!
+spanning-tree mode pvst
+!
+class-map match-any CM-VOZ-IN
+ match access-group name ACL-VOZ
+class-map match-any CM-TRANS-IN
+ match access-group name ACL-TRANS
+class-map match-any CM-EF
+ match ip dscp ef
+class-map match-any CM-AF31
+ match ip dscp af31
+!
+policy-map PM-MARCADO
+ class CM-VOZ-IN
+  set ip dscp ef
+ class CM-TRANS-IN
+  set ip dscp af31
+!
+policy-map PM-LLQ
+ class CM-EF
+  priority 128
+ class CM-AF31
+  bandwidth 256
+!
+!
+!
+!
+!
+interface Loopback0
+ ip address 172.28.252.5 255.255.255.255
+!
+interface Tunnel0
+ ip address 172.28.254.1 255.255.255.252
+ mtu 1476
+ tunnel source GigabitEthernet0/1
+ tunnel destination 203.0.113.10
+!
+!
+interface Tunnel1
+ ip address 172.28.254.5 255.255.255.252
+ mtu 1476
+ tunnel source GigabitEthernet0/1
+ tunnel destination 203.0.113.11
+!
+!
+interface GigabitEthernet0/0
+ description Hacia Nube-MPLS (enlace primario)
+ ip address 203.0.113.1 255.255.255.248
+ service-policy output PM-LLQ
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/1
+ description Hacia Nube-Internet (respaldo VPN)
+ ip address 203.0.113.9 255.255.255.248
+ duplex auto
+ speed auto
+ crypto map BCI-MAP
+!
+interface GigabitEthernet0/2
+ description Hacia FW-Core (outside)
+ ip address 172.28.253.6 255.255.255.252
+ service-policy input PM-MARCADO
+ duplex auto
+ speed auto
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ router-id 172.28.252.5
+ log-adjacency-changes
+ redistribute static subnets 
+ network 172.28.252.5 0.0.0.0 area 0
+ network 203.0.113.0 0.0.0.7 area 0
+ default-information originate
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 172.28.253.5 
+ip route 172.28.70.0 255.255.255.0 203.0.113.10 200
+ip route 172.28.80.0 255.255.255.0 203.0.113.11 200
+!
+ip flow-export version 9
+!
+!
+access-list 110 permit ip 172.28.0.0 0.0.255.255 172.28.70.0 0.0.0.255
+access-list 120 permit ip 172.28.0.0 0.0.255.255 172.28.80.0 0.0.0.255
+ip access-list extended ACL-VOZ
+ permit ip 172.28.40.0 0.0.0.255 any
+ip access-list extended ACL-TRANS
+ permit ip 172.28.30.0 0.0.0.255 any
+!
+!
+!
+!
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
